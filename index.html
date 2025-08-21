@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Geometry Viewer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.154.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="info">Drag to orbit, scroll to zoom. Model: <code>example_stand.geo.json</code></div>
+  <canvas id="c"></canvas>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
