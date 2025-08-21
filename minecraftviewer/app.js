@@ -146,7 +146,7 @@ async function loadModel() {
       const sx = size[0], sy = size[1], sz = size[2];
       const geometry = new THREE.BoxGeometry(sx, sy, sz);
       // apply per-face UVs if the cube specifies a uv origin
-      if(Array.isArray(cube.uv) && cube.uv.length === 2){
+  if(Array.isArray(cube.uv) && cube.uv.length === 2){
         // uv origin in texture pixels
         const uvOrigin = cube.uv;
         // helper: set UVs on the BoxGeometry
@@ -154,22 +154,23 @@ async function loadModel() {
           // BoxGeometry has 6 faces, each with 4 vertices -> 24 UV pairs
           // faceIndex in [0..5]; each face occupies 4 consecutive UV entries
           const u0 = ux / texW;
-          const v0 = uy / texH;
           const u1 = (ux + uw) / texW;
-          const v1 = (uy + uh) / texH;
+          // Bedrock UV y-origin is top-left; Three.js uses bottom-left
+          const vTop = 1 - (uy / texH);
+          const vBottom = 1 - ((uy + uh) / texH);
           // vertex order for each face in BufferGeometry: (1,1),(0,1),(0,0),(1,0)
           const iu0 = mirror ? u1 : u0;
           const iu1 = mirror ? u0 : u1;
           const uvs = geom.attributes.uv.array;
           const offset = faceIndex * 8; // 4 vertices * 2 components
           // (1,1)
-          uvs[offset + 0] = iu1; uvs[offset + 1] = v1;
+          uvs[offset + 0] = iu1; uvs[offset + 1] = vTop;
           // (0,1)
-          uvs[offset + 2] = iu0; uvs[offset + 3] = v1;
+          uvs[offset + 2] = iu0; uvs[offset + 3] = vTop;
           // (0,0)
-          uvs[offset + 4] = iu0; uvs[offset + 5] = v0;
+          uvs[offset + 4] = iu0; uvs[offset + 5] = vBottom;
           // (1,0)
-          uvs[offset + 6] = iu1; uvs[offset + 7] = v0;
+          uvs[offset + 6] = iu1; uvs[offset + 7] = vBottom;
           geom.attributes.uv.needsUpdate = true;
         };
 
@@ -180,21 +181,22 @@ async function loadModel() {
         const h = sy;
         const d = sz;
         // face order in three.js BoxGeometry: +X, -X, +Y, -Y, +Z, -Z
-        // Using the convention where the texture layout starts at (u,v) for the +X face
-        // and the net is: [+X][+Z][+Y][ -Z ][ -X ] horizontally (approx). We'll use a common mapping:
-        // +X (right): ux = u,           uy = v,           uw = d, uh = h
-        // -X (left):  ux = u + d + w,   uy = v,           uw = d, uh = h
-        // +Y (top):   ux = u + d,       uy = v,           uw = w, uh = d
-        // -Y (bottom):ux = u + d + w + d, uy = v,         uw = w, uh = d
-        // +Z (front): ux = u + d,       uy = v + d,       uw = w, uh = h
-        // -Z (back):  ux = u + d + w,   uy = v + d,       uw = w, uh = h
+        // Bedrock net (starting from uv origin at top-left of the layout):
+        // middle row: [-X][+Z][+X][-Z] with sizes [d×h][w×h][d×h][w×h]
+        // top row above +Z: [+Y] (w×d), bottom row below +Z: [-Y] (w×d)
         try{
-          setFaceUV(geometry, 0, u, v, d, h, cube.mirror); // +X
-          setFaceUV(geometry, 1, u + d + w, v, d, h, cube.mirror); // -X
-          setFaceUV(geometry, 2, u + d, v, w, d, cube.mirror); // +Y
-          setFaceUV(geometry, 3, u + d + w + d, v, w, d, cube.mirror); // -Y
-          setFaceUV(geometry, 4, u + d, v + d, w, h, cube.mirror); // +Z (front)
-          setFaceUV(geometry, 5, u + d + w, v + d, w, h, cube.mirror); // -Z (back)
+          // +X (right)
+          setFaceUV(geometry, 0, u + d + w, v + d, d, h, cube.mirror);
+          // -X (left)
+          setFaceUV(geometry, 1, u, v + d, d, h, cube.mirror);
+          // +Y (top)
+          setFaceUV(geometry, 2, u + d, v, w, d, cube.mirror);
+          // -Y (bottom)
+          setFaceUV(geometry, 3, u + d + w, v, w, d, cube.mirror);
+          // +Z (front)
+          setFaceUV(geometry, 4, u + d, v + d, w, h, cube.mirror);
+          // -Z (back)
+          setFaceUV(geometry, 5, u + d + w + d, v + d, w, h, cube.mirror);
         }catch(e){
           // UV mapping best-effort; ignore errors and fall back to default UVs
           console.warn('UV mapping failed for cube', cube, e);
